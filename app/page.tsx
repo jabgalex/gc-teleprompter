@@ -1,6 +1,6 @@
 'use client'
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const sample = 'Pega tu guion aquí y pulsa Iniciar.\n\nGC Teleprompter mantiene tu lectura clara, fluida y bajo control.'
 const MIN_SPEED = 0.5
@@ -19,6 +19,11 @@ export default function Home() {
   const readerRef = useRef<HTMLDivElement>(null)
   const markerRefs = useRef<Array<HTMLParagraphElement | null>>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const toggle = useCallback(() => {
+    setScript((current) => current.trim() ? current : sample)
+    setPlaying((value) => !value)
+  }, [])
 
   const sections = useMemo(() => {
     const blocks = script.trim().split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean)
@@ -59,6 +64,17 @@ export default function Home() {
       setMaxOffset(Math.max(0, reader.scrollHeight - reader.clientHeight))
     }
   }, [script, size])
+
+  useEffect(() => {
+    const reader = readerRef.current
+    if (!reader || typeof ResizeObserver === 'undefined') return
+    const resizeObserver = new ResizeObserver(() => {
+      setMaxOffset(Math.max(0, reader.scrollHeight - reader.clientHeight))
+      setOffset(reader.scrollTop)
+    })
+    resizeObserver.observe(reader)
+    return () => resizeObserver.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!playing) {
@@ -111,7 +127,7 @@ export default function Home() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+  }, [toggle])
 
   const loadFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -126,11 +142,6 @@ export default function Home() {
       setScript(String(reader.result ?? ''))
     }
     reader.readAsText(file)
-  }
-
-  const toggle = () => {
-    if (!script.trim()) setScript(sample)
-    setPlaying((value) => !value)
   }
 
   const reset = () => {
