@@ -9,4 +9,6 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
 button,input,textarea { font:inherit; }
 ::selection { background:var(--yellow); color:#090a0c; }
 .range { accent-color:var(--yellow); }
+.mobile-teleprompter-preview { display:block; }
+@media (min-width:640px) { .mobile-teleprompter-preview { display:none; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; } }
