@@ -9,6 +9,10 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
 button,input,textarea { font:inherit; }
 ::selection { background:var(--yellow); color:#090a0c; }
 .range { accent-color:var(--yellow); }
+.reader-scroll { scrollbar-color:var(--yellow) #161a1f; scrollbar-width:auto; }
+.reader-scroll::-webkit-scrollbar { width:14px; }
+.reader-scroll::-webkit-scrollbar-track { background:#161a1f; }
+.reader-scroll::-webkit-scrollbar-thumb { background:var(--yellow); border:3px solid #161a1f; border-radius:999px; }
 .mobile-teleprompter-preview { display:block; }
 @media (min-width:640px) { .mobile-teleprompter-preview { display:none; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; } }
