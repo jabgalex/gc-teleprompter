@@ -221,22 +221,25 @@ export default function Home() {
     pointerMoved.current = false
     pointerWasPlaying.current = playing
     pointerOnScrollbar.current = event.clientX - reader.getBoundingClientRect().left >= reader.clientWidth
-    setPlaying(false)
   }
 
   const moveReaderPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     const start = pointerStart.current
     if (!start || start.id !== event.pointerId) return
     const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y)
-    if (distance > 8) pointerMoved.current = true
+    if (distance > 8 && !pointerMoved.current) {
+      pointerMoved.current = true
+      debugLastEvent.current = 'pointermove'
+      setPlaying(false)
+    }
   }
 
   const endReaderPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     const start = pointerStart.current
     if (!start || start.id !== event.pointerId) return
-    const shouldResume = !pointerMoved.current && !pointerOnScrollbar.current && !pointerWasPlaying.current
+    const shouldToggle = !pointerMoved.current && !pointerOnScrollbar.current
     pointerStart.current = null
-    if (shouldResume) setPlaying(true)
+    if (shouldToggle) setPlaying(!pointerWasPlaying.current)
   }
 
   const cancelReaderPointer = () => {

@@ -51,6 +51,24 @@ test('inicio táctil mueve el lector en móvil realista', async ({ browser }) =>
   await context.close()
 })
 
+test('pointerdown táctil aislado no detiene la reproducción', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  const script = Array.from({ length: 60 }, (_, index) => `Parte ${index + 1}: texto largo para lectura.`).join('\n\n')
+  await page.locator('#script').fill(script)
+  const reader = page.locator('.reader-scroll')
+  await page.getByRole('button', { name: '▶ Iniciar' }).click()
+  await expect(page.getByText('EN MARCHA')).toBeVisible()
+  await reader.evaluate((element) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 9, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 9, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
+  })
+  await expect(page.getByText('EN MARCHA')).toBeVisible()
+  const position = await reader.evaluate((element) => element.scrollTop)
+  await page.waitForTimeout(350)
+  expect(await reader.evaluate((element) => element.scrollTop)).toBeGreaterThan(position)
+})
+
 test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 })
   await page.goto('/')
