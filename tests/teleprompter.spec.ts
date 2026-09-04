@@ -69,6 +69,21 @@ test('pointerdown táctil aislado no detiene la reproducción', async ({ page })
   expect(await reader.evaluate((element) => element.scrollTop)).toBeGreaterThan(position)
 })
 
+test('el movimiento no depende exclusivamente de requestAnimationFrame', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.requestAnimationFrame = () => 0
+  })
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  const script = Array.from({ length: 60 }, (_, index) => `Parte ${index + 1}: texto largo para lectura.`).join('\n\n')
+  await page.locator('#script').fill(script)
+  const reader = page.locator('.reader-scroll')
+  await page.getByRole('button', { name: '▶ Iniciar' }).click()
+  await expect(page.getByText('EN MARCHA')).toBeVisible()
+  await page.waitForTimeout(350)
+  expect(await reader.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+})
+
 test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 })
   await page.goto('/')

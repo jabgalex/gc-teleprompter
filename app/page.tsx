@@ -13,7 +13,7 @@ export default function Home() {
   const [playing, setPlaying] = useState(false)
   const [offset, setOffset] = useState(0)
   const [maxOffset, setMaxOffset] = useState(0)
-  const frame = useRef<number | null>(null)
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null)
   const last = useRef<number | null>(null)
   const indicatorTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readerRef = useRef<HTMLDivElement>(null)
@@ -38,17 +38,15 @@ export default function Home() {
 
     if (!script.trim()) setScript(sample)
     setPlaying(false)
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        const reader = readerRef.current
-        if (!reader) return
-        const maximum = Math.max(0, reader.scrollHeight - reader.clientHeight)
-        setMaxOffset(maximum)
-        setOffset(reader.scrollTop)
-        last.current = null
-        setPlaying(maximum > 0)
-      })
-    })
+    window.setTimeout(() => {
+      const reader = readerRef.current
+      if (!reader) return
+      const maximum = Math.max(0, reader.scrollHeight - reader.clientHeight)
+      setMaxOffset(maximum)
+      setOffset(reader.scrollTop)
+      last.current = null
+      setPlaying(maximum > 0)
+    }, 32)
   }, [playing, script])
 
   const sections = useMemo(() => {
@@ -100,7 +98,7 @@ export default function Home() {
 
   useEffect(() => {
     return () => {
-      if (frame.current) cancelAnimationFrame(frame.current)
+      if (timer.current) clearInterval(timer.current)
       if (indicatorTimer.current) clearTimeout(indicatorTimer.current)
     }
   }, [])
@@ -128,8 +126,8 @@ export default function Home() {
   useEffect(() => {
     if (!playing) {
       last.current = null
-      if (frame.current) cancelAnimationFrame(frame.current)
-      frame.current = null
+      if (timer.current) clearInterval(timer.current)
+      timer.current = null
       return
     }
 
@@ -158,13 +156,12 @@ export default function Home() {
         }
       }
       last.current = time
-      frame.current = requestAnimationFrame(tick)
     }
 
-    frame.current = requestAnimationFrame(tick)
+    timer.current = setInterval(() => tick(performance.now()), 16)
     return () => {
-      if (frame.current) cancelAnimationFrame(frame.current)
-      frame.current = null
+      if (timer.current) clearInterval(timer.current)
+      timer.current = null
     }
   }, [playing, speed])
 
