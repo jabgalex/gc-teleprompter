@@ -13,11 +13,13 @@ export default function Home() {
   const [playing, setPlaying] = useState(false)
   const [offset, setOffset] = useState(0)
   const [maxOffset, setMaxOffset] = useState(0)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
   const last = useRef<number | null>(null)
   const playbackPosition = useRef(0)
   const indicatorTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readerRef = useRef<HTMLDivElement>(null)
+  const fullscreenRef = useRef<HTMLElement>(null)
   const markerRefs = useRef<Array<HTMLParagraphElement | null>>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null)
@@ -50,6 +52,38 @@ export default function Home() {
       setPlaying(maximum > 0)
     }, 32)
   }, [playing, script])
+
+  const toggleFullscreen = async () => {
+    const element = fullscreenRef.current
+    if (!element) return
+
+    if (isFullscreen && !document.fullscreenElement) {
+      setIsFullscreen(false)
+      return
+    }
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      return
+    }
+
+    if (!element.requestFullscreen) {
+      setIsFullscreen(true)
+      return
+    }
+
+    try {
+      await element.requestFullscreen()
+    } catch {
+      setIsFullscreen(true)
+    }
+  }
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   const sections = useMemo(() => {
     const blocks = script.trim().split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean)
@@ -269,12 +303,13 @@ export default function Home() {
             <p className="max-w-md text-base leading-7 text-[var(--muted)]">Un telepromter practico y util para tus grabaciones. Creado por UN STUDIOS</p>
           </div>
 
-          <section className="reader-panel overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]" aria-label="Área del teleprompter">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]"><span className="flex items-center gap-2"><i className={`h-2 w-2 rounded-full ${playing ? 'bg-[var(--yellow)]' : 'bg-slate-500'}`} />{playing ? 'EN MARCHA' : 'EN PAUSA'}</span><span>{Math.round(offset)} / {Math.round(maxOffset)} px</span></div>
+          <section ref={fullscreenRef} className={`reader-panel overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] ${isFullscreen ? 'teleprompter-fullscreen' : ''}`} aria-label="Área del teleprompter">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]"><span className="flex items-center gap-2"><i className={`h-2 w-2 rounded-full ${playing ? 'bg-[var(--yellow)]' : 'bg-slate-500'}`} />{playing ? 'EN MARCHA' : 'EN PAUSA'}</span><div className="flex items-center gap-2"><span>{Math.round(offset)} / {Math.round(maxOffset)} px</span><button onClick={toggleFullscreen} aria-label={isFullscreen ? 'Salir de pantalla completa' : '⛶ Pantalla completa'} className="rounded-md border border-[var(--line)] px-2 py-1 text-[var(--muted)] transition hover:border-[var(--yellow)] hover:text-[var(--yellow)]">{isFullscreen ? '↙ Salir' : '⛶'}</button></div></div>
             <div ref={readerRef} onPointerDown={startReaderPointer} onPointerMove={moveReaderPointer} onPointerUp={endReaderPointer} onPointerCancel={cancelReaderPointer} onWheel={() => setPlaying(false)} onScroll={scheduleIndicator} className="reader-scroll relative h-[46vh] min-h-[330px] overflow-y-auto overflow-x-hidden bg-black" tabIndex={0} aria-label="Texto desplazable del teleprompter">
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black to-transparent" /><div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-black to-transparent" /><div className="pointer-events-none absolute left-0 right-0 top-1/2 border-t border-dashed border-[var(--yellow)]/40" />
               <div className="px-6 pb-24 pt-[45%] text-center font-semibold leading-[1.35]" style={{ fontSize: `${size}px` }}>{sections.map((section, index) => <p key={`${index}-${section.slice(0, 12)}`} ref={(element) => { markerRefs.current[index] = element }} className="mb-12 whitespace-pre-wrap last:mb-0">{section}</p>)}</div>
             </div>
+            <div className="fullscreen-controls"><button onClick={toggle} className="rounded-lg border border-[var(--line)] bg-black/70 px-3 py-2 text-xs font-semibold text-[var(--white)] hover:border-[var(--yellow)]">{playing ? '■ Pausar' : '▶ Reanudar'}</button><button onClick={reset} className="rounded-lg border border-[var(--line)] bg-black/70 px-3 py-2 text-xs font-semibold text-[var(--white)] hover:border-[var(--yellow)]">Reiniciar</button><label className="flex min-w-36 items-center gap-2 rounded-lg border border-[var(--line)] bg-black/70 px-3 py-2 text-xs text-[var(--muted)]">Velocidad <input aria-label="Velocidad en pantalla completa" className="range w-20" type="range" min={MIN_SPEED} max={MAX_SPEED} step="0.5" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /><strong className="text-[var(--white)]">{speed.toFixed(1)}x</strong></label></div>
             <div className="border-t border-[var(--line)] px-4 py-3"><input aria-label="Posición del teleprompter" className="range w-full" type="range" min="0" max={maxOffset} value={Math.min(offset, maxOffset)} onChange={(event) => { setPlaying(false); syncPosition(Number(event.target.value)) }} /></div>
           </section>
 
