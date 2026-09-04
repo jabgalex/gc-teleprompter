@@ -146,14 +146,49 @@ test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ 
   await expect(page.getByText('EN MARCHA')).toBeVisible()
 })
 
+test('fullscreen mantiene controles en la barra superior y deja libre el lector', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: undefined })
+  })
+  await page.goto('/')
+  const panel = page.locator('.reader-panel')
+  await page.getByRole('button', { name: 'Pantalla completa' }).click()
+  const topbar = panel.locator('.fullscreen-topbar')
+  await expect(topbar).toBeVisible()
+  await expect(topbar.getByRole('button', { name: /Pausar|Reanudar/ })).toBeVisible()
+  await expect(topbar.getByRole('button', { name: 'Reiniciar' })).toBeVisible()
+  await expect(topbar.locator('input[aria-label="Velocidad en pantalla completa"]')).toBeVisible()
+  await expect(panel.locator('.fullscreen-controls')).toHaveCount(0)
+  await expect(panel.locator('.reader-top-fade')).toHaveCount(0)
+})
+
+test('swipe táctil no abandona pantalla completa', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: undefined })
+  })
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  const panel = page.locator('.reader-panel')
+  const reader = page.locator('.reader-scroll')
+  await page.getByRole('button', { name: 'Pantalla completa' }).click()
+  await reader.evaluate((element) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 22, pointerType: 'touch', clientX: 180, clientY: 500, bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointermove', { pointerId: 22, pointerType: 'touch', clientX: 180, clientY: 420, bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointerup', { pointerId: 22, pointerType: 'touch', clientX: 180, clientY: 420, bubbles: true }))
+  })
+  await expect(panel).toHaveClass(/teleprompter-fullscreen/)
+  await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toBeVisible()
+})
+
+
 test('pantalla completa ofrece entrada y retorno con fallback táctil', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: undefined })
   })
   await page.goto('/')
   const panel = page.locator('.reader-panel')
-  await expect(page.getByRole('button', { name: '⛶ Pantalla completa' })).toBeVisible()
-  await page.getByRole('button', { name: '⛶ Pantalla completa' }).click()
+  await expect(page.getByRole('button', { name: 'Pantalla completa' })).toBeVisible()
+  await page.getByRole('button', { name: 'Pantalla completa' }).click()
   await expect(panel).toHaveClass(/teleprompter-fullscreen/)
   await expect(page.getByRole('button', { name: 'Salir de pantalla completa' })).toBeVisible()
   await page.getByRole('button', { name: 'Salir de pantalla completa' }).click()
@@ -169,7 +204,7 @@ test('pantalla completa conserva la reproducción', async ({ page }) => {
   await page.locator('#script').fill(Array.from({ length: 80 }, (_, index) => `Parte ${index + 1}: texto para pantalla completa.`).join('\\n\\n'))
   await page.getByRole('button', { name: '▶ Iniciar' }).click()
   await expect(page.getByText('EN MARCHA')).toBeVisible()
-  await page.getByRole('button', { name: '⛶ Pantalla completa' }).click()
+  await page.getByRole('button', { name: 'Pantalla completa' }).click()
   await page.waitForTimeout(350)
   expect(await page.locator('.reader-scroll').evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
   await expect(page.getByText('EN MARCHA')).toBeVisible()
