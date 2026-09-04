@@ -23,8 +23,14 @@ export default function Home() {
   const pointerMoved = useRef(false)
   const pointerWasPlaying = useRef(false)
   const pointerOnScrollbar = useRef(false)
+  const debugFrames = useRef(0)
+  const debugLastEvent = useRef('none')
+  const debugLastFrameTime = useRef(0)
+  const [debugEnabled, setDebugEnabled] = useState(false)
+  const [debugInfo, setDebugInfo] = useState({ frames: 0, lastEvent: 'none', lastFrameTime: 0, top: 0, scrollHeight: 0, clientHeight: 0, maxScroll: 0, currentPlaying: false })
 
   const toggle = useCallback(() => {
+    debugLastEvent.current = playing ? 'toggle-pause' : 'toggle-start'
     if (playing) {
       setPlaying(false)
       return
@@ -59,6 +65,7 @@ export default function Home() {
   }
 
   const scheduleIndicator = () => {
+    debugLastEvent.current = 'scroll'
     if (indicatorTimer.current) return
     indicatorTimer.current = setTimeout(() => {
       indicatorTimer.current = null
@@ -68,6 +75,28 @@ export default function Home() {
       }
     }, 80)
   }
+
+  useEffect(() => {
+    setDebugEnabled(new URLSearchParams(window.location.search).get('debug') === '1')
+  }, [])
+
+  useEffect(() => {
+    if (!debugEnabled) return
+    const timer = window.setInterval(() => {
+      const reader = readerRef.current
+      setDebugInfo({
+        frames: debugFrames.current,
+        lastEvent: debugLastEvent.current,
+        lastFrameTime: debugLastFrameTime.current,
+        top: reader?.scrollTop ?? 0,
+        scrollHeight: reader?.scrollHeight ?? 0,
+        clientHeight: reader?.clientHeight ?? 0,
+        maxScroll: reader ? Math.max(0, reader.scrollHeight - reader.clientHeight) : 0,
+        currentPlaying: playing,
+      })
+    }, 250)
+    return () => window.clearInterval(timer)
+  }, [debugEnabled, playing])
 
   useEffect(() => {
     return () => {
@@ -105,6 +134,8 @@ export default function Home() {
     }
 
     const tick = (time: number) => {
+      debugFrames.current += 1
+      debugLastFrameTime.current = time
       const reader = readerRef.current
       const previous = last.current
       if (!reader) {
@@ -185,6 +216,7 @@ export default function Home() {
   const startReaderPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     const reader = readerRef.current
     if (!reader) return
+    debugLastEvent.current = 'pointerdown'
     pointerStart.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
     pointerMoved.current = false
     pointerWasPlaying.current = playing
@@ -221,6 +253,8 @@ export default function Home() {
             <div><p className="m-0 text-sm font-bold tracking-[.18em]">UN STUDIOS</p><p className="m-0 text-xs uppercase tracking-[.22em] text-[var(--muted)]">App Suite</p></div>
           </div>
         </header>
+
+        {debugEnabled && <aside className="mb-6 rounded-xl border border-[var(--yellow)]/50 bg-[var(--surface)] p-4 font-mono text-xs text-[var(--muted)]" data-testid="debug-panel"><p className="mb-2 font-bold text-[var(--yellow)]">Diagnóstico táctil</p><div className="grid gap-1 sm:grid-cols-2"><span>playing: {String(debugInfo.currentPlaying)}</span><span>último evento: {debugInfo.lastEvent}</span><span>frames: {debugInfo.frames}</span><span>último frame: {Math.round(debugInfo.lastFrameTime)}</span><span>scrollTop: {Math.round(debugInfo.top)}</span><span>scrollHeight: {Math.round(debugInfo.scrollHeight)}</span><span>clientHeight: {Math.round(debugInfo.clientHeight)}</span><span>maxScroll: {Math.round(debugInfo.maxScroll)}</span></div></aside>}
 
         <section className="workspace mb-7">
           <div className="hero-block">

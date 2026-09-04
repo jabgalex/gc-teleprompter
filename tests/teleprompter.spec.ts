@@ -1,5 +1,11 @@
 import { devices, expect, test } from '@playwright/test'
 
+test('modo diagnóstico muestra métricas solo con debug=1', async ({ page }) => {
+  await page.goto('/?debug=1')
+  await expect(page.getByTestId('debug-panel')).toBeVisible()
+  await expect(page.getByText('scrollHeight:')).toBeVisible()
+})
+
 test('lector precede la edición en móvil y tablet', async ({ page }) => {
   for (const width of [320, 375, 380, 430, 768]) {
     await page.setViewportSize({ width, height: 800 })
