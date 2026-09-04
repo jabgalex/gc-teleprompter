@@ -10,13 +10,16 @@ button,input,textarea { font:inherit; }
 ::selection { background:var(--yellow); color:#090a0c; }
 .range { accent-color:var(--yellow); }
 .workspace { display:grid; gap:1.25rem; }
-.editor-panel { order:1; }
-.reader-panel { order:2; }
+.editor-panel { order:3; }
+.reader-panel { order:1; }
+.marker-panel { order:2; }
+.reader-scroll { touch-action:pan-y; }
 @media (min-width:1024px) {
   .workspace { grid-template-columns:.8fr 1.2fr; align-items:start; }
   .hero-block { grid-column:1; grid-row:1; }
   .editor-panel { grid-column:2; grid-row:1; }
   .reader-panel { grid-column:1 / -1; grid-row:2; }
+  .marker-panel { grid-column:1 / -1; grid-row:3; }
 }
 .reader-scroll { scrollbar-color:var(--yellow) #161a1f; scrollbar-width:auto; }
 .reader-scroll::-webkit-scrollbar { width:14px; }

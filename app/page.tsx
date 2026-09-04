@@ -25,9 +25,25 @@ export default function Home() {
   const pointerOnScrollbar = useRef(false)
 
   const toggle = useCallback(() => {
-    setScript((current) => current.trim() ? current : sample)
-    setPlaying((value) => !value)
-  }, [])
+    if (playing) {
+      setPlaying(false)
+      return
+    }
+
+    if (!script.trim()) setScript(sample)
+    setPlaying(false)
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const reader = readerRef.current
+        if (!reader) return
+        const maximum = Math.max(0, reader.scrollHeight - reader.clientHeight)
+        setMaxOffset(maximum)
+        setOffset(reader.scrollTop)
+        last.current = null
+        setPlaying(maximum > 0)
+      })
+    })
+  }, [playing, script])
 
   const sections = useMemo(() => {
     const blocks = script.trim().split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean)
@@ -222,13 +238,14 @@ export default function Home() {
             <div className="border-t border-[var(--line)] px-4 py-3"><input aria-label="Posición del teleprompter" className="range w-full" type="range" min="0" max={maxOffset} value={Math.min(offset, maxOffset)} onChange={(event) => { setPlaying(false); syncPosition(Number(event.target.value)) }} /></div>
           </section>
 
+          {sections.length > 1 && <section className="marker-panel rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4" aria-label="Marcadores del guion"><p className="mb-3 text-xs font-semibold uppercase tracking-[.18em] text-[var(--muted)]">Marcadores del guion</p><div className="marker-list grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{sections.map((section, index) => <button key={`marker-${index}`} onClick={() => jumpToSection(index)} className="min-w-0 rounded-lg border border-[var(--line)] px-3 py-2 text-left text-xs hover:border-[var(--yellow)] hover:text-[var(--yellow)]">Parte {index + 1}: {section.slice(0, 48)}{section.length > 48 ? '…' : ''}</button>)}</div></section>}
+
           <div className="editor-panel rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between"><label htmlFor="script" className="text-sm font-semibold">Guion</label><button onClick={() => fileRef.current?.click()} className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold hover:border-[var(--yellow)] hover:text-[var(--yellow)]">Cargar .TXT</button><input ref={fileRef} type="file" accept=".txt,text/plain" onChange={loadFile} className="hidden" /></div>
             <textarea id="script" value={script} onChange={(event) => { setPlaying(false); setScript(event.target.value) }} placeholder="Pega aquí el texto de tu presentación..." className="min-h-44 w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--black)] p-4 text-sm leading-6 text-[var(--white)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--yellow)]" />
             <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-xs text-[var(--muted)]">Tamaño <strong className="ml-2 text-[var(--white)]">{size}px</strong><input aria-label="Tamaño del texto" className="range mt-2 w-full" type="range" min="24" max="72" value={size} onChange={(event) => setSize(Number(event.target.value))} /></label><label className="text-xs text-[var(--muted)]">Velocidad <strong className="ml-2 text-[var(--white)]">{speed.toFixed(1)}x</strong><input aria-label="Velocidad del teleprompter" className="range mt-2 w-full" type="range" min={MIN_SPEED} max={MAX_SPEED} step="0.5" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label></div>
             <div className="mt-4 flex flex-wrap gap-3"><button onClick={toggle} className="rounded-xl bg-[var(--yellow)] px-5 py-3 font-bold text-black hover:bg-[var(--yellow2)]">{playing ? '■ Pausar' : '▶ Iniciar'}</button><button onClick={reset} className="rounded-xl border border-[var(--line)] px-5 py-3 text-sm font-semibold hover:border-[var(--yellow)]">Reiniciar</button><button onClick={() => moveBy(-120)} className="rounded-xl border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:border-[var(--yellow)]">−10 s</button><button onClick={() => moveBy(120)} className="rounded-xl border border-[var(--line)] px-4 py-3 text-sm font-semibold hover:border-[var(--yellow)]">+10 s</button></div>
             <p className="mt-3 text-xs text-[var(--muted)]">Barra espaciadora: {playing ? 'pausar' : 'iniciar'}. En pantalla táctil, toca el lector para pausar o reanudar; desliza para buscar una posición.</p>
-            {sections.length > 1 && <div className="mt-5 border-t border-[var(--line)] pt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.18em] text-[var(--muted)]">Marcadores del guion</p><div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">{sections.map((section, index) => <button key={`marker-${index}`} onClick={() => jumpToSection(index)} className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs hover:border-[var(--yellow)] hover:text-[var(--yellow)]">Parte {index + 1}: {section.slice(0, 24)}{section.length > 24 ? '…' : ''}</button>)}</div></div>}
           </div>
         </section>
 

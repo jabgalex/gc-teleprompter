@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test'
+import { devices, expect, test } from '@playwright/test'
 
-test('settings precede el lector en móvil y tablet', async ({ page }) => {
+test('lector precede la edición en móvil y tablet', async ({ page }) => {
   for (const width of [320, 375, 380, 430, 768]) {
     await page.setViewportSize({ width, height: 800 })
     await page.goto('/')
@@ -9,9 +9,40 @@ test('settings precede el lector en móvil y tablet', async ({ page }) => {
       const reader = document.querySelector('.reader-panel')?.getBoundingClientRect()
       return { settingsTop: settings?.top ?? -1, readerTop: reader?.top ?? -1, overflowX: document.documentElement.scrollWidth > window.innerWidth }
     })
-    expect(layout.settingsTop, `settings top at ${width}px`).toBeLessThan(layout.readerTop)
+    expect(layout.readerTop, `reader top at ${width}px`).toBeLessThan(layout.settingsTop)
     expect(layout.overflowX, `horizontal overflow at ${width}px`).toBe(false)
   }
+})
+
+test('marcadores quedan visibles debajo del lector en portrait', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  const script = Array.from({ length: 12 }, (_, index) => `Parte ${index + 1}: texto de prueba.`).join('\n\n')
+  await page.locator('#script').fill(script)
+  const reader = page.locator('.reader-panel')
+  const markers = page.locator('.marker-panel')
+  await expect(markers).toBeVisible()
+  const layout = await reader.evaluate((element) => {
+    const marker = document.querySelector('.marker-panel')?.getBoundingClientRect()
+    const readerBox = element.getBoundingClientRect()
+    return { readerBottom: readerBox.bottom, markerTop: marker?.top ?? -1, markerBottom: marker?.bottom ?? -1 }
+  })
+  expect(layout.markerTop).toBeGreaterThanOrEqual(layout.readerBottom)
+  expect(await markers.locator('button').count()).toBe(12)
+})
+
+test('inicio táctil mueve el lector en móvil realista', async ({ browser }) => {
+  const context = await browser.newContext({ ...devices['iPhone 13'] })
+  const page = await context.newPage()
+  await page.goto('/')
+  const script = Array.from({ length: 60 }, (_, index) => `Parte ${index + 1}: texto largo para lectura.`).join('\n\n')
+  await page.locator('#script').fill(script)
+  const reader = page.locator('.reader-scroll')
+  await page.getByRole('button', { name: '▶ Iniciar' }).tap()
+  await expect(page.getByText('EN MARCHA')).toBeVisible()
+  await page.waitForTimeout(700)
+  expect(await reader.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  await context.close()
 })
 
 test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ page }) => {
