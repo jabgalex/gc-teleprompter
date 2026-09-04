@@ -10,6 +10,8 @@ button,input,textarea { font:inherit; }
 ::selection { background:var(--yellow); color:#090a0c; }
 .range { accent-color:var(--yellow); }
 .workspace { display:grid; gap:1.25rem; }
+.editor-panel { order:1; }
+.reader-panel { order:2; }
 @media (min-width:1024px) {
   .workspace { grid-template-columns:.8fr 1.2fr; align-items:start; }
   .hero-block { grid-column:1; grid-row:1; }

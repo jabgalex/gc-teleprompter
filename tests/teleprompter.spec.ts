@@ -1,5 +1,19 @@
 import { expect, test } from '@playwright/test'
 
+test('settings precede el lector en móvil y tablet', async ({ page }) => {
+  for (const width of [320, 375, 380, 430, 768]) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    const layout = await page.evaluate(() => {
+      const settings = document.querySelector('.editor-panel')?.getBoundingClientRect()
+      const reader = document.querySelector('.reader-panel')?.getBoundingClientRect()
+      return { settingsTop: settings?.top ?? -1, readerTop: reader?.top ?? -1, overflowX: document.documentElement.scrollWidth > window.innerWidth }
+    })
+    expect(layout.settingsTop, `settings top at ${width}px`).toBeLessThan(layout.readerTop)
+    expect(layout.overflowX, `horizontal overflow at ${width}px`).toBe(false)
+  }
+})
+
 test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 })
   await page.goto('/')
@@ -21,8 +35,10 @@ test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ 
 
   await page.getByRole('button', { name: '■ Pausar' }).click()
   await reader.evaluate((element) => {
-    element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
     element.scrollTop = 400
+    element.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 140, bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 140, bubbles: true }))
   })
   await expect(page.getByText('EN PAUSA')).toBeVisible()
   await expect.poll(() => reader.evaluate((element) => element.scrollTop)).toBe(400)
@@ -31,6 +47,18 @@ test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ 
   await page.waitForTimeout(500)
   const resumedPosition = await reader.evaluate((element) => element.scrollTop)
   expect(resumedPosition).toBeGreaterThan(400)
+  await expect(page.getByText('EN MARCHA')).toBeVisible()
+
+  await reader.evaluate((element) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 2, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
+  })
+  await expect(page.getByText('EN PAUSA')).toBeVisible()
+
+  await reader.evaluate((element) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 3, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
+    element.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3, pointerType: 'touch', clientX: 100, clientY: 100, bubbles: true }))
+  })
   await expect(page.getByText('EN MARCHA')).toBeVisible()
 })
 
