@@ -15,6 +15,7 @@ export default function Home() {
   const [maxOffset, setMaxOffset] = useState(0)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
   const last = useRef<number | null>(null)
+  const playbackPosition = useRef(0)
   const indicatorTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readerRef = useRef<HTMLDivElement>(null)
   const markerRefs = useRef<Array<HTMLParagraphElement | null>>([])
@@ -44,6 +45,7 @@ export default function Home() {
       const maximum = Math.max(0, reader.scrollHeight - reader.clientHeight)
       setMaxOffset(maximum)
       setOffset(reader.scrollTop)
+      playbackPosition.current = reader.scrollTop
       last.current = null
       setPlaying(maximum > 0)
     }, 32)
@@ -59,6 +61,7 @@ export default function Home() {
     if (!reader) return
     const next = Math.max(0, Math.min(value, Math.max(0, reader.scrollHeight - reader.clientHeight)))
     reader.scrollTop = next
+    playbackPosition.current = next
     setOffset(next)
   }
 
@@ -69,6 +72,7 @@ export default function Home() {
       indicatorTimer.current = null
       if (readerRef.current) {
         setOffset(readerRef.current.scrollTop)
+        if (!playing) playbackPosition.current = readerRef.current.scrollTop
         setMaxOffset(Math.max(0, readerRef.current.scrollHeight - readerRef.current.clientHeight))
       }
     }, 80)
@@ -107,6 +111,7 @@ export default function Home() {
     const reader = readerRef.current
     if (reader) {
       reader.scrollTop = 0
+      playbackPosition.current = 0
       setOffset(0)
       setMaxOffset(Math.max(0, reader.scrollHeight - reader.clientHeight))
     }
@@ -147,7 +152,8 @@ export default function Home() {
           setPlaying(false)
           return
         }
-        const next = Math.min(maximum, reader.scrollTop + ((time - previous) / 1000) * speed * 18)
+        const next = Math.min(maximum, playbackPosition.current + ((time - previous) / 1000) * speed * 18)
+        playbackPosition.current = next
         reader.scrollTop = next
         if (next >= maximum - 1) {
           setOffset(maximum)

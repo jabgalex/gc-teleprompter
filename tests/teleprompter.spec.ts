@@ -84,6 +84,20 @@ test('el movimiento no depende exclusivamente de requestAnimationFrame', async (
   expect(await reader.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
 })
 
+test('acumula desplazamiento fraccional a velocidades menores de 2x', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  const script = Array.from({ length: 100 }, (_, index) => `Parte ${index + 1}: texto largo para lectura lenta.`).join('\n\n')
+  await page.locator('#script').fill(script)
+  await page.locator('input[aria-label="Velocidad del teleprompter"]').fill('0.5')
+  const reader = page.locator('.reader-scroll')
+  await page.getByRole('button', { name: '▶ Iniciar' }).click()
+  await expect(page.getByText('EN MARCHA')).toBeVisible()
+  await page.waitForTimeout(900)
+  expect(await reader.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+})
+
+
 test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 })
   await page.goto('/')
