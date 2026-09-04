@@ -148,11 +148,13 @@ test('teleprompter mantiene la posición al pausar, mover y reanudar', async ({ 
 
 test('fullscreen mantiene controles en la barra superior y deja libre el lector', async ({ page }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: undefined })
+    ;(window as typeof window & { fullscreenRequestCount?: number }).fullscreenRequestCount = 0
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: () => { const win = window as typeof window & { fullscreenRequestCount?: number }; win.fullscreenRequestCount = (win.fullscreenRequestCount ?? 0) + 1; return Promise.resolve() } })
   })
   await page.goto('/')
   const panel = page.locator('.reader-panel')
   await page.getByRole('button', { name: 'Pantalla completa' }).click()
+  expect(await page.evaluate(() => (window as typeof window & { fullscreenRequestCount?: number }).fullscreenRequestCount)).toBe(0)
   const topbar = panel.locator('.fullscreen-topbar')
   await expect(topbar).toBeVisible()
   await expect(topbar.getByRole('button', { name: /Pausar|Reanudar/ })).toBeVisible()
